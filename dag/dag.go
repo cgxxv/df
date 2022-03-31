@@ -189,7 +189,7 @@ func (d *DAG) String() string {
 	return result
 }
 
-func (d *DAG) execTask(ctx context.Context, t *task, bus Bus) {
+func (d *DAG) execTask(ctx context.Context, t *task, bus any) {
 	defer func() {
 		if a := recover(); a != nil {
 			switch err := a.(type) {

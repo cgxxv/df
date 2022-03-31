@@ -5,11 +5,9 @@ import (
 	"errors"
 )
 
-type Bus interface{}
-
 type Task interface {
 	GetName() string
-	Process(ctx context.Context, bus Bus) error
+	Process(ctx context.Context, bus any) error
 }
 
 var (
@@ -46,7 +44,7 @@ func NewTask(ut Task) *task {
 	}
 }
 
-func (t *task) Process(ctx context.Context, bus Bus) error {
+func (t *task) Process(ctx context.Context, bus any) error {
 	if t.Task != nil {
 		return t.Task.Process(ctx, bus)
 	}
@@ -75,9 +73,5 @@ func (t *task) Waits() map[string]struct{} {
 }
 
 func (t *task) String() string {
-	if t.GetName() != "" {
-		return t.GetName()
-	}
-
-	return "<nil>"
+	return t.GetName()
 }

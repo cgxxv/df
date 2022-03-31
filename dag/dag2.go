@@ -77,7 +77,7 @@ func InitScheduler(ctx context.Context, service string) error {
 	return nil
 }
 
-func Schedule(ctx context.Context, service string, bus Bus) error {
+func Schedule(ctx context.Context, service string, bus any) error {
 	if rt := reflect2.TypeOf(bus); rt.Kind() != reflect.Ptr {
 		return errors.New("Bus must be a pointer")
 	}

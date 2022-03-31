@@ -41,8 +41,8 @@ func (v *Vertex) Task() Task {
 }
 
 func (v *Vertex) String() string {
-	result := fmt.Sprintf("ID: %s - Parents: %d - Children: %d - Value: %v\n",
-		v.ID, v.Parents.Size(), v.Children.Size(), fmt.Sprintf("name:%#v, waits:%#v, waits2:%#v", v.task.GetName(), v.task.waits, v.task.waits2))
+	result := fmt.Sprintf("ID: %s - Parents: %d - Children: %d - Value:%v\n",
+		v.ID, v.Parents.Size(), v.Children.Size(), v.task.GetName())
 
 	return result
 }
