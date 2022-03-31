@@ -2,53 +2,67 @@ package dag
 
 import (
 	"context"
-	"sync"
+	"errors"
 )
 
-type Bus interface {
-	sync.Locker
-}
+type Bus interface{}
 
 type Task interface {
+	GetName() string
 	Process(ctx context.Context, bus Bus) error
+}
+
+var (
+	taskMap = make(map[string]Task, 1024)
+)
+
+func RegisterTask(task ...Task) error {
+	for _, t := range task {
+		_, ok := taskMap[t.GetName()]
+		if ok {
+			return errors.New("Duplicated task name")
+		}
+		taskMap[t.GetName()] = t
+	}
+	return nil
 }
 
 type task struct {
 	Task
-	Name string
 
 	waits    map[string]struct{}
 	notifies map[string]struct{}
 	waits2   map[string]struct{}
+	err      error
 }
 
-func NewTask(name string) *task {
+func NewTask(ut Task) *task {
 	return &task{
-		Name:     name,
+		Task:     ut,
 		waits:    make(map[string]struct{}, 16),
 		notifies: make(map[string]struct{}, 16),
 		waits2:   make(map[string]struct{}, 16),
+		err:      nil,
 	}
 }
 
 func (t *task) Process(ctx context.Context, bus Bus) error {
 	if t.Task != nil {
-		bus.Lock()
-		defer bus.Unlock()
 		return t.Task.Process(ctx, bus)
 	}
 	return nil
 }
 
 func (t *task) Wait(t1 *task) {
-	t.waits[t1.Name] = struct{}{}
-	t1.notifies[t.Name] = struct{}{}
+	t.waits[t1.GetName()] = struct{}{}
+	t1.notifies[t.GetName()] = struct{}{}
 }
 
 func (t *task) Reset() {
 	for k, v := range t.waits {
 		t.waits2[k] = v
 	}
+	t.err = nil
 }
 
 func (t *task) Waits() map[string]struct{} {
@@ -61,8 +75,8 @@ func (t *task) Waits() map[string]struct{} {
 }
 
 func (t *task) String() string {
-	if t.Name != "" {
-		return t.Name
+	if t.GetName() != "" {
+		return t.GetName()
 	}
 
 	return "<nil>"

@@ -1,10 +1,19 @@
 package dag_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cgxxv/df/dag"
 )
+
+type fakeTask struct {
+	name string
+}
+
+func newFakeTask(name string) *fakeTask                            { return &fakeTask{name} }
+func (t *fakeTask) GetName() string                                { return t.name }
+func (t *fakeTask) Process(ctx context.Context, bus dag.Bus) error { return nil }
 
 func TestDAG(t *testing.T) {
 	d := dag.NewDAG()
@@ -17,7 +26,7 @@ func TestDAG(t *testing.T) {
 func TestDAG_AddVertex(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(""))
+	vertex1 := dag.NewVertex("1", dag.NewTask(nil))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -62,7 +71,7 @@ func TestDAG_AddEdge(t *testing.T) {
 	dag1 := dag.NewDAG()
 
 	vertex1 := dag.NewVertex("1", nil)
-	vertex2 := dag.NewVertex("2", dag.NewTask("two"))
+	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask("two")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -171,8 +180,8 @@ func TestDAG_DeleteEdge(t *testing.T) {
 func TestDAG_GetVertex(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask("one"))
-	vertex2 := dag.NewVertex("2", dag.NewTask("2"))
+	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask("one")))
+	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask("2")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -188,11 +197,11 @@ func TestDAG_GetVertex(t *testing.T) {
 
 	expected1 := "one"
 	expected2 := "2"
-	if v1.Task().Name != expected1 {
-		t.Fatalf("Expected value1 to be %q but got %v.", expected1, v1.Task().Name)
+	if v1.Task().GetName() != expected1 {
+		t.Fatalf("Expected value1 to be %q but got %v.", expected1, v1.Task().GetName())
 	}
-	if v1.Task().Name != expected1 {
-		t.Fatalf("Expected value2 to be %q but got %v.", expected2, v2.Task().Name)
+	if v1.Task().GetName() != expected1 {
+		t.Fatalf("Expected value2 to be %q but got %v.", expected2, v2.Task().GetName())
 	}
 }
 

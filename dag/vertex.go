@@ -36,13 +36,13 @@ func (v *Vertex) OutDegree() int {
 	return v.Children.Size()
 }
 
-func (v *Vertex) Task() *task {
-	return v.task
+func (v *Vertex) Task() Task {
+	return v.task.Task
 }
 
 func (v *Vertex) String() string {
 	result := fmt.Sprintf("ID: %s - Parents: %d - Children: %d - Value: %v\n",
-		v.ID, v.Parents.Size(), v.Children.Size(), fmt.Sprintf("name:%#v, waits:%#v, waits2:%#v", v.task.Name, v.task.waits, v.task.waits2))
+		v.ID, v.Parents.Size(), v.Children.Size(), fmt.Sprintf("name:%#v, waits:%#v, waits2:%#v", v.task.GetName(), v.task.waits, v.task.waits2))
 
 	return result
 }

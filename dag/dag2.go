@@ -18,13 +18,15 @@ var (
 type daging struct {
 	dagpool  *sync.Pool
 	nodemeta map[string]*NodeMeta
-	endnode  *NodeMeta
+	endnodes []*NodeMeta
 }
 
-func InitNodeMeta(service string, nms []*NodeMeta) error {
+func InitScheduler(ctx context.Context, service string) error {
 	if _, ok := dagmap.Load(service); ok {
 		return errors.New("Duplicated key for daging")
 	}
+
+	nms := getSchedulerNodeMeta(ctx, service)
 
 	if len(nms) == 0 {
 		return errors.New("Empty node lists")
@@ -32,10 +34,10 @@ func InitNodeMeta(service string, nms []*NodeMeta) error {
 
 	dg := daging{
 		nodemeta: make(map[string]*NodeMeta, len(nms)),
+		endnodes: make([]*NodeMeta, 0, len(nms)),
 	}
 
 	var start = make([]*NodeMeta, 0, len(nms))
-	var end = make([]*NodeMeta, 0, len(nms))
 
 	for _, nm := range nms {
 		if nm.Application != os.Getenv("APPLICATION") {
@@ -45,13 +47,10 @@ func InitNodeMeta(service string, nms []*NodeMeta) error {
 		if len(start) > 1 {
 			return errors.New("Start task must be one node")
 		}
-		if len(end) > 1 {
-			return errors.New("End task must be one node")
-		}
 
 		if len(nm.Children) == 0 {
-			end = append(end, nm)
-		} else if len(nm.Parent) == 0 {
+			dg.endnodes = append(dg.endnodes, nm)
+		} else if len(nm.Parents) == 0 {
 			start = append(start, nm)
 		}
 
@@ -61,14 +60,10 @@ func InitNodeMeta(service string, nms []*NodeMeta) error {
 	if len(start) != 1 {
 		return errors.New("Start task must be one node")
 	}
-	if len(end) != 1 {
-		return errors.New("End task must be one node")
-	}
 
-	dg.endnode = end[0]
 	dg.dagpool = &sync.Pool{
 		New: func() interface{} {
-			d, err := dg.NewDag()
+			d, err := dg.instance()
 			if err != nil {
 				return nil
 			}
@@ -97,7 +92,7 @@ func Schedule(ctx context.Context, service string, bus Bus) error {
 	dag := dg.get()
 
 	for _, v := range dag.SourceVertices() {
-		go runTask(ctx, dag, v.task, bus)
+		go dag.execTask(ctx, v.task, bus)
 	}
 
 	var finished int
@@ -108,6 +103,9 @@ func Schedule(ctx context.Context, service string, bus Bus) error {
 		}
 
 		t := <-dag.TaskChan()
+		if t.err != nil {
+			return t.err
+		}
 		finished++
 
 		for n := range t.notifies {
@@ -115,9 +113,9 @@ func Schedule(ctx context.Context, service string, bus Bus) error {
 			if !ok {
 				panic("unreachable")
 			}
-			delete(w.task.waits2, t.Name)
+			delete(w.task.waits2, t.GetName())
 			if len(w.task.waits2) == 0 {
-				go runTask(ctx, dag, w.task, bus)
+				go dag.execTask(ctx, w.task, bus)
 			}
 		}
 	}
@@ -127,16 +125,9 @@ func Schedule(ctx context.Context, service string, bus Bus) error {
 	return nil
 }
 
-func runTask(ctx context.Context, dag *DAG, t *task, bus Bus) {
-	if err := t.Process(ctx, bus); err != nil {
-		println(err)
-	}
-	dag.TaskChan() <- t
-}
-
-func (dg *daging) NewDag() (*DAG, error) {
-	if dg.endnode == nil {
-		return nil, errors.New("Nil end nodemeta")
+func (dg *daging) instance() (*DAG, error) {
+	if len(dg.endnodes) <= 0 {
+		return nil, errors.New("Empty end nodemeta")
 	}
 	if len(dg.nodemeta) <= 0 {
 		return nil, errors.New("Empty nodemeta info")
@@ -144,7 +135,9 @@ func (dg *daging) NewDag() (*DAG, error) {
 
 	d := NewDAG()
 	q := list.New()
-	q.PushBack(dg.endnode)
+	for _, endnode := range dg.endnodes {
+		q.PushBack(endnode)
+	}
 
 	for q.Len() > 0 {
 		e := q.Front()
@@ -155,37 +148,36 @@ func (dg *daging) NewDag() (*DAG, error) {
 
 		var vertex *Vertex
 		if vt, ok := d.vertmap[nm.Name]; !ok {
-			t := NewTask(nm.Name)
-			t.Task = nodeMap[nm.Name]
-			vertex = NewVertex(nm.Name, t)
+			ut, ok := taskMap[nm.Name]
+			if !ok {
+				panic("unreachable")
+			}
+			vertex = NewVertex(nm.Name, NewTask(ut))
 			d.AddVertex(vertex)
 		} else {
 			vertex = vt
 		}
 
-		for _, parent := range nm.Parent {
+		for _, parent := range nm.Parents {
 			q.PushBack(dg.nodemeta[parent])
 
 			var vt *Vertex
 			if _vt, ok := d.vertmap[parent]; !ok {
-				pt := NewTask(parent)
-				pt.Task = nodeMap[parent]
-				vt = NewVertex(parent, pt)
+				ut, ok := taskMap[parent]
+				if !ok {
+					panic("unreachable")
+				}
+				vt = NewVertex(parent, NewTask(ut))
 				d.AddVertex(vt)
 			} else {
 				vt = _vt
 			}
-			addEdge(d, vt, vertex)
+			d.AddEdge(vt, vertex)
 		}
 		q.Remove(e)
 	}
 
 	return d, nil
-}
-
-func addEdge(dag *DAG, tailVertex, headVertex *Vertex) {
-	headVertex.task.Wait(tailVertex.task)
-	dag.AddEdge(tailVertex, headVertex)
 }
 
 func (dg *daging) get() *DAG {

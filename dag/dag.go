@@ -1,6 +1,7 @@
 package dag
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -29,7 +30,7 @@ func (d *DAG) TaskChan() chan *task {
 
 func (d *DAG) AddVertex(v *Vertex) error {
 	d.vertices.Put(v.ID, v)
-	d.vertmap[v.task.Name] = v
+	d.vertmap[v.task.GetName()] = v
 
 	return nil
 }
@@ -47,7 +48,7 @@ func (d *DAG) DeleteVertex(vertex *Vertex) error {
 	}
 
 	d.vertices.Remove(vertex.ID)
-	delete(d.vertmap, vertex.task.Name)
+	delete(d.vertmap, vertex.task.GetName())
 
 	return nil
 }
@@ -79,6 +80,8 @@ func (d *DAG) AddEdge(tailVertex *Vertex, headVertex *Vertex) error {
 
 	tailVertex.Children.Add(headVertex)
 	headVertex.Parents.Add(tailVertex)
+
+	headVertex.task.Wait(tailVertex.task)
 
 	return nil
 }
@@ -184,6 +187,24 @@ func (d *DAG) String() string {
 	}
 
 	return result
+}
+
+func (d *DAG) execTask(ctx context.Context, t *task, bus Bus) {
+	defer func() {
+		if a := recover(); a != nil {
+			switch err := a.(type) {
+			case nil:
+			case error:
+				t.err = err
+			default:
+				t.err = fmt.Errorf("%v", err)
+			}
+		}
+		d.TaskChan() <- t
+	}()
+	if err := t.Process(ctx, bus); err != nil {
+		t.err = err
+	}
 }
 
 func (d *DAG) reset() error {

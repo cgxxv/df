@@ -7,7 +7,7 @@ import (
 )
 
 func TestVertex(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(""))
+	v := dag.NewVertex("1", dag.NewTask(nil))
 
 	if v.ID == "" {
 		t.Fatalf("Vertex ID expected to be not empty string.\n")
@@ -18,7 +18,7 @@ func TestVertex(t *testing.T) {
 }
 
 func TestVertex_Parents(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(""))
+	v := dag.NewVertex("1", dag.NewTask(nil))
 
 	numParents := v.Parents.Size()
 	if numParents != 0 {
@@ -27,7 +27,7 @@ func TestVertex_Parents(t *testing.T) {
 }
 
 func TestVertex_Children(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(""))
+	v := dag.NewVertex("1", dag.NewTask(nil))
 
 	numParents := v.Children.Size()
 	if numParents != 0 {
@@ -38,9 +38,9 @@ func TestVertex_Children(t *testing.T) {
 func TestVertex_Degree(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(""))
-	vertex2 := dag.NewVertex("2", dag.NewTask(""))
-	vertex3 := dag.NewVertex("3", dag.NewTask(""))
+	vertex1 := dag.NewVertex("1", dag.NewTask(nil))
+	vertex2 := dag.NewVertex("2", dag.NewTask(nil))
+	vertex3 := dag.NewVertex("3", dag.NewTask(nil))
 
 	degree := vertex1.Degree()
 	if degree != 0 {
@@ -84,9 +84,9 @@ func TestVertex_Degree(t *testing.T) {
 func TestVertex_InDegree(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(""))
-	vertex2 := dag.NewVertex("2", dag.NewTask(""))
-	vertex3 := dag.NewVertex("3", dag.NewTask(""))
+	vertex1 := dag.NewVertex("1", dag.NewTask(nil))
+	vertex2 := dag.NewVertex("2", dag.NewTask(nil))
+	vertex3 := dag.NewVertex("3", dag.NewTask(nil))
 
 	inDegree := vertex1.InDegree()
 	if inDegree != 0 {
@@ -130,9 +130,9 @@ func TestVertex_InDegree(t *testing.T) {
 func TestVertex_OutDegree(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(""))
-	vertex2 := dag.NewVertex("2", dag.NewTask(""))
-	vertex3 := dag.NewVertex("3", dag.NewTask(""))
+	vertex1 := dag.NewVertex("1", dag.NewTask(nil))
+	vertex2 := dag.NewVertex("2", dag.NewTask(nil))
+	vertex3 := dag.NewVertex("3", dag.NewTask(nil))
 
 	outDegree := vertex1.OutDegree()
 	if outDegree != 0 {
@@ -179,7 +179,7 @@ func TestVertex_OutDegree(t *testing.T) {
 }
 
 func TestVertex_String(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(""))
+	v := dag.NewVertex("1", dag.NewTask(nil))
 	vstr := v.String()
 
 	expected := "ID: 1 - Parents: 0 - Children: 0 - Value: <nil>\n"
@@ -189,7 +189,7 @@ func TestVertex_String(t *testing.T) {
 }
 
 func TestVertex_String_WithStringValue(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask("one"))
+	v := dag.NewVertex("1", dag.NewTask(newFakeTask("one")))
 	vstr := v.String()
 
 	expected := "ID: 1 - Parents: 0 - Children: 0 - Value: one\n"
@@ -199,12 +199,12 @@ func TestVertex_String_WithStringValue(t *testing.T) {
 }
 
 func TestVertex_WithStringValue(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask("one"))
+	v := dag.NewVertex("1", dag.NewTask(newFakeTask("one")))
 
 	if v.ID == "" {
 		t.Fatalf("Vertex ID expected to be not empty string.\n")
 	}
-	if v.Task().Name != "one" {
+	if v.Task().GetName() != "one" {
 		t.Fatalf("Vertex Value expected to be one.\n")
 	}
 }
