@@ -3,6 +3,7 @@ package dag_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/cgxxv/df/dag"
 )
@@ -13,8 +14,9 @@ type fakeTask[T any, V any] struct {
 	name V
 }
 
-func newFakeTask[T, V any](name V) *fakeTask[T, V]                 { return &fakeTask[T, V]{name} }
+func newFakeNode[T, V any](name V) *fakeTask[T, V]                 { return &fakeTask[T, V]{name} }
 func (t *fakeTask[T, V]) GetName() V                               { return t.name }
+func (t *fakeTask[T, V]) Timeout() time.Duration                   { return 5 * time.Millisecond }
 func (t *fakeTask[T, V]) Process(ctx context.Context, bus T) error { return nil }
 
 func TestDAG(t *testing.T) {
@@ -28,7 +30,7 @@ func TestDAG(t *testing.T) {
 func TestDAG_AddVertex(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -43,7 +45,7 @@ func TestDAG_AddVertex(t *testing.T) {
 func TestDAG_DeleteVertex(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -72,8 +74,8 @@ func TestDAG_DeleteVertex(t *testing.T) {
 func TestDAG_AddEdge(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("two")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("two", newFakeNode[T]("two")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -93,9 +95,9 @@ func TestDAG_AddEdge(t *testing.T) {
 func TestDAG_AddEdge_FailsVertextDontExist(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -120,8 +122,8 @@ func TestDAG_AddEdge_FailsVertextDontExist(t *testing.T) {
 func TestDAG_AddEdge_FailsAlreadyExists(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -146,8 +148,8 @@ func TestDAG_AddEdge_FailsAlreadyExists(t *testing.T) {
 func TestDAG_DeleteEdge(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -182,8 +184,8 @@ func TestDAG_DeleteEdge(t *testing.T) {
 func TestDAG_GetVertex(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("one")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("2")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("one", newFakeNode[T]("one")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("2", newFakeNode[T]("2")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -216,9 +218,9 @@ func TestDAG_Order(t *testing.T) {
 		t.Fatalf("Expected order to be %d but got %d", expected_order, order)
 	}
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -249,10 +251,10 @@ func TestDAG_Size(t *testing.T) {
 		t.Fatalf("Expected size to be %d but got %d", expected_size, size)
 	}
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
-	vertex4 := dag.NewVertex("4", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
+	vertex4 := dag.NewVertex("4", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -307,8 +309,8 @@ func TestDAG_SinkVertices(t *testing.T) {
 		t.Fatalf("Expected to have 0 Sink vertices but got %d", len(sinkVertices))
 	}
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -343,8 +345,8 @@ func TestDAG_SourceVertices(t *testing.T) {
 		t.Fatalf("Expected to have 0 Source vertices but got %d", len(sourceVertices))
 	}
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -375,8 +377,8 @@ func TestDAG_SourceVertices(t *testing.T) {
 func TestDAG_Successors(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -407,9 +409,9 @@ func TestDAG_Successors(t *testing.T) {
 func TestDAG_Successors_VertexNotFound(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -434,8 +436,8 @@ func TestDAG_Successors_VertexNotFound(t *testing.T) {
 func TestDAG_Predecessors(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -466,9 +468,9 @@ func TestDAG_Predecessors(t *testing.T) {
 func TestDAG_Predecessors_VertexNotFound(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {

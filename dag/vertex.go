@@ -10,15 +10,15 @@ type Vertex struct {
 	ID       string
 	Parents  *orderedset.OrderedSet
 	Children *orderedset.OrderedSet
-	task     *task
+	node     *node
 }
 
-func NewVertex(id string, task *task) *Vertex {
+func NewVertex(id string, node *node) *Vertex {
 	v := &Vertex{
 		ID:       id,
 		Parents:  orderedset.NewOrderedSet(),
 		Children: orderedset.NewOrderedSet(),
-		task:     task,
+		node:     node,
 	}
 
 	return v
@@ -37,12 +37,12 @@ func (v *Vertex) OutDegree() int {
 }
 
 func (v *Vertex) Task() Task {
-	return v.task.Task
+	return v.node.Task
 }
 
 func (v *Vertex) String() string {
 	result := fmt.Sprintf("ID: %s - Parents: %d - Children: %d - Value:%v\n",
-		v.ID, v.Parents.Size(), v.Children.Size(), v.task.GetName())
+		v.ID, v.Parents.Size(), v.Children.Size(), v.node.GetName())
 
 	return result
 }

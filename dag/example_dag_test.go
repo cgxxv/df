@@ -9,10 +9,10 @@ import (
 func ExampleDAG_vertices() {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
-	vertex4 := dag.NewVertex("4", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
+	vertex4 := dag.NewVertex("4", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {
@@ -48,10 +48,10 @@ func ExampleDAG_vertices() {
 func ExampleDAG_edges() {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
-	vertex4 := dag.NewVertex("4", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
+	vertex4 := dag.NewVertex("4", dag.NewNode("", newFakeNode[T]("")))
 
 	err := dag1.AddVertex(vertex1)
 	if err != nil {

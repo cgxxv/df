@@ -7,7 +7,7 @@ import (
 )
 
 func TestVertex(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
+	v := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
 
 	if v.ID == "" {
 		t.Fatalf("Vertex ID expected to be not empty string.\n")
@@ -18,7 +18,7 @@ func TestVertex(t *testing.T) {
 }
 
 func TestVertex_Parents(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
+	v := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
 
 	numParents := v.Parents.Size()
 	if numParents != 0 {
@@ -27,7 +27,7 @@ func TestVertex_Parents(t *testing.T) {
 }
 
 func TestVertex_Children(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
+	v := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
 
 	numParents := v.Children.Size()
 	if numParents != 0 {
@@ -38,9 +38,9 @@ func TestVertex_Children(t *testing.T) {
 func TestVertex_Degree(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	degree := vertex1.Degree()
 	if degree != 0 {
@@ -84,9 +84,9 @@ func TestVertex_Degree(t *testing.T) {
 func TestVertex_InDegree(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	inDegree := vertex1.InDegree()
 	if inDegree != 0 {
@@ -130,9 +130,9 @@ func TestVertex_InDegree(t *testing.T) {
 func TestVertex_OutDegree(t *testing.T) {
 	dag1 := dag.NewDAG()
 
-	vertex1 := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
-	vertex2 := dag.NewVertex("2", dag.NewTask(newFakeTask[T]("")))
-	vertex3 := dag.NewVertex("3", dag.NewTask(newFakeTask[T]("")))
+	vertex1 := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
+	vertex2 := dag.NewVertex("2", dag.NewNode("", newFakeNode[T]("")))
+	vertex3 := dag.NewVertex("3", dag.NewNode("", newFakeNode[T]("")))
 
 	outDegree := vertex1.OutDegree()
 	if outDegree != 0 {
@@ -179,7 +179,7 @@ func TestVertex_OutDegree(t *testing.T) {
 }
 
 func TestVertex_String(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("")))
+	v := dag.NewVertex("1", dag.NewNode("", newFakeNode[T]("")))
 	vstr := v.String()
 
 	expected := "ID: 1 - Parents: 0 - Children: 0 - Value:\n"
@@ -189,7 +189,7 @@ func TestVertex_String(t *testing.T) {
 }
 
 func TestVertex_String_WithStringValue(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("one")))
+	v := dag.NewVertex("1", dag.NewNode("one", newFakeNode[T]("one")))
 	vstr := v.String()
 
 	expected := "ID: 1 - Parents: 0 - Children: 0 - Value:one\n"
@@ -199,7 +199,7 @@ func TestVertex_String_WithStringValue(t *testing.T) {
 }
 
 func TestVertex_WithStringValue(t *testing.T) {
-	v := dag.NewVertex("1", dag.NewTask(newFakeTask[T]("one")))
+	v := dag.NewVertex("1", dag.NewNode("one", newFakeNode[T]("one")))
 
 	if v.ID == "" {
 		t.Fatalf("Vertex ID expected to be not empty string.\n")

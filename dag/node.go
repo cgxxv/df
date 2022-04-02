@@ -1,48 +1,59 @@
 package dag
 
-import (
-	"context"
-	"os"
-)
+import "context"
 
-type NodeMeta struct {
-	Name        string   `json:"name"`
-	Parents     []string `json:"parent"`
-	Children    []string `json:"children"`
-	Application string   `json:"application"`
-	Service     string   `json:"service"`
+type node struct {
+	uuid     string
+	waits    map[string]struct{}
+	notifies map[string]struct{}
+	waits2   map[string]struct{}
+	err      error
+	done     chan struct{}
+
+	Task
 }
 
-func getSchedulerNodeMeta(ctx context.Context, service string) []*NodeMeta {
-	/*
-		1 -- 2 -- 5
-		|         |
-		3 --------4
-	*/
-	// var nms = []*NodeMeta{
-	// 	{"1", []string{}, []string{"2", "3"}, zae.Service()},
-	// 	{"2", []string{"1"}, []string{"5"}, zae.Service()},
-	// 	{"3", []string{"1"}, []string{"4"}, zae.Service()},
-	// 	{"4", []string{"3", "5"}, []string{}, zae.Service()},
-	// 	{"5", []string{"2"}, []string{"4"}, zae.Service()},
-	// }
+func NewNode(uuid string, ut Task) *node {
+	return &node{
+		uuid:     uuid,
+		waits:    make(map[string]struct{}, 16),
+		notifies: make(map[string]struct{}, 16),
+		waits2:   make(map[string]struct{}, 16),
+		err:      nil,
+		done:     make(chan struct{}),
 
-	/*
-		1 -- 2 -- 5
-		|		 |
-		3 -- 4
-	*/
-	var nms = []*NodeMeta{
-		{"1", []string{}, []string{"2", "3"}, os.Getenv("APPLICATION"), os.Getenv("SERVICE")},
-		{"2", []string{"1"}, []string{"5"}, os.Getenv("APPLICATION"), os.Getenv("SERVICE")},
-		{"3", []string{"1"}, []string{"4"}, os.Getenv("APPLICATION"), os.Getenv("SERVICE")},
-		{"4", []string{"3", "5"}, []string{}, os.Getenv("APPLICATION"), os.Getenv("SERVICE")},
-		{"5", []string{"2"}, []string{"4"}, os.Getenv("APPLICATION"), os.Getenv("SERVICE")},
+		Task: ut,
 	}
-	return nms
 }
 
-//debug
-func GetSchedulerNodeMeta(ctx context.Context, service string) []*NodeMeta {
-	return getSchedulerNodeMeta(ctx, service)
+func (t *node) Process(ctx context.Context, bus any) error {
+	if t.Task != nil {
+		return t.Task.Process(ctx, bus)
+	}
+	return nil
+}
+
+func (t *node) Wait(t1 *node) {
+	t.waits[t1.GetName()] = struct{}{}
+	t1.notifies[t.GetName()] = struct{}{}
+}
+
+func (t *node) Reset() {
+	for k, v := range t.waits {
+		t.waits2[k] = v
+	}
+	t.err = nil
+}
+
+func (t *node) Waits() map[string]struct{} {
+	waits := make(map[string]struct{}, len(t.waits))
+	for k, v := range t.waits {
+		waits[k] = v
+	}
+
+	return waits
+}
+
+func (t *node) String() string {
+	return t.GetName()
 }

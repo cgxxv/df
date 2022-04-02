@@ -17,8 +17,8 @@ var (
 
 type daging struct {
 	dagpool  *sync.Pool
-	nodemeta map[string]*NodeMeta
-	endnodes []*NodeMeta
+	nodemeta map[string]*Nodeinfo
+	endnodes []*Nodeinfo
 }
 
 func InitScheduler(ctx context.Context, service string) error {
@@ -26,18 +26,18 @@ func InitScheduler(ctx context.Context, service string) error {
 		return errors.New("Duplicated key for daging")
 	}
 
-	nms := getSchedulerNodeMeta(ctx, service)
+	nms := getSchedulerNodeinfo(ctx, service)
 
 	if len(nms) == 0 {
 		return errors.New("Empty node lists")
 	}
 
 	dg := daging{
-		nodemeta: make(map[string]*NodeMeta, len(nms)),
-		endnodes: make([]*NodeMeta, 0, len(nms)),
+		nodemeta: make(map[string]*Nodeinfo, len(nms)),
+		endnodes: make([]*Nodeinfo, 0, len(nms)),
 	}
 
-	var start = make([]*NodeMeta, 0, len(nms))
+	var start = make([]*Nodeinfo, 0, len(nms))
 
 	for _, nm := range nms {
 		if nm.Application != os.Getenv("APPLICATION") {
@@ -45,7 +45,7 @@ func InitScheduler(ctx context.Context, service string) error {
 		}
 
 		if len(start) > 1 {
-			return errors.New("Start task must be one node")
+			return errors.New("Start node must be one node")
 		}
 
 		if len(nm.Children) == 0 {
@@ -54,11 +54,11 @@ func InitScheduler(ctx context.Context, service string) error {
 			start = append(start, nm)
 		}
 
-		dg.nodemeta[nm.Name] = nm
+		dg.nodemeta[nm.UUID] = nm
 	}
 
 	if len(start) != 1 {
-		return errors.New("Start task must be one node")
+		return errors.New("Start node must be one node")
 	}
 
 	dg.dagpool = &sync.Pool{
@@ -92,7 +92,9 @@ func Schedule(ctx context.Context, service string, bus any) error {
 	dag := dg.get()
 
 	for _, v := range dag.SourceVertices() {
-		go dag.execTask(ctx, v.task, bus)
+		if err := dag.execTask(ctx, v.node, bus); err != nil {
+			return err
+		}
 	}
 
 	var finished int
@@ -113,9 +115,11 @@ func Schedule(ctx context.Context, service string, bus any) error {
 			if !ok {
 				panic("unreachable")
 			}
-			delete(w.task.waits2, t.GetName())
-			if len(w.task.waits2) == 0 {
-				go dag.execTask(ctx, w.task, bus)
+			delete(w.node.waits2, t.GetName())
+			if len(w.node.waits2) == 0 {
+				if err := dag.execTask(ctx, w.node, bus); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -141,18 +145,18 @@ func (dg *daging) instance() (*DAG, error) {
 
 	for q.Len() > 0 {
 		e := q.Front()
-		nm, ok := e.Value.(*NodeMeta)
+		nm, ok := e.Value.(*Nodeinfo)
 		if !ok {
 			return nil, errors.New("Node assertion error")
 		}
 
 		var vertex *Vertex
-		if vt, ok := d.vertmap[nm.Name]; !ok {
-			ut, ok := taskMap[nm.Name]
+		if vt, ok := d.vertmap[nm.UUID]; !ok {
+			ut, ok := taskMap[nm.UUID]
 			if !ok {
 				panic("unreachable")
 			}
-			vertex = NewVertex(nm.Name, NewTask(ut))
+			vertex = NewVertex(nm.UUID, NewNode(nm.UUID, ut))
 			d.AddVertex(vertex)
 		} else {
 			vertex = vt
@@ -163,11 +167,15 @@ func (dg *daging) instance() (*DAG, error) {
 
 			var vt *Vertex
 			if _vt, ok := d.vertmap[parent]; !ok {
+				node, ok := dg.nodemeta[parent]
+				if !ok {
+					panic("unreachable")
+				}
 				ut, ok := taskMap[parent]
 				if !ok {
 					panic("unreachable")
 				}
-				vt = NewVertex(parent, NewTask(ut))
+				vt = NewVertex(parent, NewNode(node.UUID, ut))
 				d.AddVertex(vt)
 			} else {
 				vt = _vt

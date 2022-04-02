@@ -11,26 +11,26 @@ import (
 type DAG struct {
 	vertices orderedmap.OrderedMap
 	vertmap  map[string]*Vertex
-	taskChan chan *task
+	nodeChan chan *node
 }
 
 func NewDAG() *DAG {
 	d := &DAG{
 		vertices: *orderedmap.NewOrderedMap(),
 		vertmap:  make(map[string]*Vertex, 256),
-		taskChan: make(chan *task),
+		nodeChan: make(chan *node),
 	}
 
 	return d
 }
 
-func (d *DAG) TaskChan() chan *task {
-	return d.taskChan
+func (d *DAG) TaskChan() chan *node {
+	return d.nodeChan
 }
 
 func (d *DAG) AddVertex(v *Vertex) error {
 	d.vertices.Put(v.ID, v)
-	d.vertmap[v.task.GetName()] = v
+	d.vertmap[v.node.GetName()] = v
 
 	return nil
 }
@@ -48,7 +48,7 @@ func (d *DAG) DeleteVertex(vertex *Vertex) error {
 	}
 
 	d.vertices.Remove(vertex.ID)
-	delete(d.vertmap, vertex.task.GetName())
+	delete(d.vertmap, vertex.node.GetName())
 
 	return nil
 }
@@ -81,7 +81,7 @@ func (d *DAG) AddEdge(tailVertex *Vertex, headVertex *Vertex) error {
 	tailVertex.Children.Add(headVertex)
 	headVertex.Parents.Add(tailVertex)
 
-	headVertex.task.Wait(tailVertex.task)
+	headVertex.node.Wait(tailVertex.node)
 
 	return nil
 }
@@ -189,7 +189,21 @@ func (d *DAG) String() string {
 	return result
 }
 
-func (d *DAG) execTask(ctx context.Context, t *task, bus any) {
+func (d *DAG) execTask(ctx context.Context, t *node, bus any) error {
+	ctx, cancel := context.WithTimeout(ctx, t.Timeout())
+	defer cancel()
+
+	go d.execTask2(ctx, t, bus)
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.done:
+		return nil
+	}
+}
+
+func (d *DAG) execTask2(ctx context.Context, t *node, bus any) {
 	defer func() {
 		if a := recover(); a != nil {
 			switch err := a.(type) {
@@ -205,6 +219,8 @@ func (d *DAG) execTask(ctx context.Context, t *task, bus any) {
 	if err := t.Process(ctx, bus); err != nil {
 		t.err = err
 	}
+
+	t.done <- struct{}{}
 }
 
 func (d *DAG) reset() error {
@@ -213,7 +229,7 @@ func (d *DAG) reset() error {
 		if !ok {
 			return errors.New("not a Vertex")
 		}
-		vertex.task.Reset()
+		vertex.node.Reset()
 	}
 
 	return nil
